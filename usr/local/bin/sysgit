@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Default config
+GIT=/usr/bin/git
+SYSGIT_DIR=/var/lib/sysgit
+
+# 
+
+# @todo Faire le -c pour préciser la conf
+. /etc/sysgit.conf
+
+# @todo IF "$1 == INIT"
+# {GIT} init --bare ${SYSGIT_DIR}
+# {GIT} config status.showUntrackedFiles no
+
+${GIT} --git-dir=${SYSGIT_DIR} --work-tree=/ $@
