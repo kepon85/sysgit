@@ -1,0 +1,80 @@
+#!/bin/bash
+
+_sysgit_profiles() {
+  local cur="${1}"
+  local profile_file="/var/lib/sysgit/sysgit.profile"
+  local config="/etc/sysgit.conf"
+  local cfg_profile=""
+
+  if [[ -r "${config}" ]]; then
+    cfg_profile="$(awk -F= '/^[[:space:]]*MULTI_GIT_COMMITTER_PROFILE=/{gsub(/[\"\047]/,"",$2); gsub(/[[:space:]]+/,"",$2); print $2}' "${config}" | tail -n1)"
+    if [[ -n "${cfg_profile}" ]]; then
+      profile_file="${cfg_profile}"
+    fi
+  fi
+
+  if [[ -r "${profile_file}" ]]; then
+    COMPREPLY=( $(compgen -W "$(awk -F'|' 'NF{print $1}' "${profile_file}")" -- "${cur}") )
+  else
+    COMPREPLY=()
+  fi
+}
+
+_sysgit() {
+  local cur prev words cword
+
+  if ! declare -F _init_completion >/dev/null; then
+    return
+  fi
+
+  _init_completion -n : || return
+
+  case "${prev}" in
+    -c)
+      _filedir
+      return
+      ;;
+    -p)
+      _sysgit_profiles "${cur}"
+      return
+      ;;
+  esac
+
+  if [[ "${cur}" == -* ]]; then
+    COMPREPLY=( $(compgen -W "-c -p -u -h" -- "${cur}") )
+    return
+  fi
+
+  if declare -F __git_main >/dev/null; then
+    local i skip_next=0
+    local new_words=("git")
+    local saved_words=("${COMP_WORDS[@]}")
+    local saved_cword="${COMP_CWORD}"
+
+    for ((i=1; i<${#COMP_WORDS[@]}; i++)); do
+      if ((skip_next)); then
+        skip_next=0
+        continue
+      fi
+      case "${COMP_WORDS[i]}" in
+        -c|-p)
+          skip_next=1
+          ;;
+        -u|-h)
+          ;;
+        *)
+          new_words+=("${COMP_WORDS[i]}")
+          ;;
+      esac
+    done
+
+    COMP_WORDS=("${new_words[@]}")
+    COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
+    __git_main
+
+    COMP_WORDS=("${saved_words[@]}")
+    COMP_CWORD="${saved_cword}"
+  fi
+}
+
+complete -F _sysgit sysgit
