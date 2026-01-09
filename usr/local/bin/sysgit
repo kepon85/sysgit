@@ -11,6 +11,7 @@ UPDATE_BRANCH=master
 MULTI_GIT_COMMITTER=0
 MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
 MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
+LOGOUT_CHECK=0
 
 # Load config file
 CONFIG=/etc/sysgit.conf
@@ -94,6 +95,63 @@ if [ "${ALWAYS_ROOT}" = "1" ] || [ "${ALWAYS_ROOT}" = "true" ]; then
     exec sudo -u root "$0" "$@"
   fi
 fi
+
+
+ensure_logout_check() {
+  if [ "${LOGOUT_CHECK}" != "1" ] && [ "${LOGOUT_CHECK}" != "true" ]; then
+    return
+  fi
+  if [ -n "${SUDO_USER}" ]; then
+    target_user="${SUDO_USER}"
+    target_home="$(getent passwd "${SUDO_USER}" | cut -d: -f 6)"
+  else
+    target_user="$(id -un 2>/dev/null)"
+    target_home="${HOME}"
+  fi
+  if [ -z "${target_home}" ] || [ ! -d "${target_home}" ]; then
+    return
+  fi
+  logout_file="${target_home}/.bash_logout"
+  marker_start="# >>> sysgit logout check >>>"
+  marker_end="# <<< sysgit logout check <<<"
+  if [ -f "${logout_file}" ] && grep -qF "${marker_start}" "${logout_file}" 2>/dev/null; then
+    return
+  fi
+  if [ -f "${logout_file}" ] && grep -q "sysgit status" "${logout_file}" 2>/dev/null; then
+    return
+  fi
+  if [ -f "${logout_file}" ] && [ -s "${logout_file}" ]; then
+    printf '\n' >> "${logout_file}"
+  else
+    printf '%s\n\n' '#!/bin/bash' >> "${logout_file}"
+  fi
+  {
+    echo "${marker_start}"
+    cat <<'EOF'
+if [ -x "/usr/local/bin/sysgit" ]; then
+  if [ -n "$(sysgit status --porcelain 2>/dev/null)" ]; then
+    echo "###############################################"
+    echo "Il y a eu des modification sur le serveur :"
+    echo "###############################################"
+    echo
+    sysgit status
+    echo
+    if [ -t 0 ] && [ -t 1 ]; then
+      read -r -p "Vous voudriez partir sans donner les raisons de ces changement ? [O/n] "
+      if [[ $REPLY =~ ^[Nn]$ ]]; then
+        sysgit commit
+      fi
+    fi
+  fi
+fi
+EOF
+    echo "${marker_end}"
+  } >> "${logout_file}"
+  if [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+    chown "${target_user}":"${target_user}" "${logout_file}" 2>/dev/null || true
+  fi
+}
+ensure_logout_check
 
 # Configuration des variables d'environnement Git pour le commiteur
 if [ -n "${SUDO_USER}" ]; then
