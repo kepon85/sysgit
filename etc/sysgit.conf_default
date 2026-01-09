@@ -5,6 +5,9 @@
 # Path to the git binary used by sysgit.
 GIT=/usr/bin/git
 
+# GIT commit options
+GIT_COMMIT_OPTIONS="--no-gpg-sign"
+
 # Bare repository location that stores the system history.
 SYSGIT_DIR=/var/lib/sysgit
 

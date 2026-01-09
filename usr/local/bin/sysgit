@@ -2,6 +2,7 @@
 
 # Default config values (can be overridden by /etc/sysgit.conf or -c).
 GIT=/usr/bin/git
+GIT_COMMIT_OPTIONS=""
 SYSGIT_DIR=/var/lib/sysgit
 ALWAYS_ROOT=0
 LOGOUT_CHECK=0
@@ -13,6 +14,7 @@ INSTALL_PREFIX=/usr/local
 INSTALL_SYSCONFDIR=/etc
 UPDATE_REPO=https://framagit.org/kepon/sysgit.git
 UPDATE_BRANCH=master
+
 
 # Load config file (system-wide defaults).
 CONFIG=/etc/sysgit.conf
@@ -332,5 +334,9 @@ if [ "${1}" = "init" ]; then
     exit $?
 fi
 
-# Delegate all other commands to git with the correct git-dir/work-tree.
-${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"
+if [ "${1}" = "commit" ]; then
+    ${GIT} ${GIT_COMMIT_OPTIONS] --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"
+else
+    # Delegate all other commands to git with the correct git-dir/work-tree.
+    ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"
+fi
