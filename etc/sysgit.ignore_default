@@ -20,7 +20,47 @@
 /etc/ld.so.cache
 /etc/.pwd.lock
 /etc/resolv.conf
+/etc/blkid.tab
+/etc/blkid.tab.old
+
+# Old versions of files
+*.old
+*.LOCK
 
 # Let's Encrypt - auto-generated cert material
 /etc/letsencrypt/archive/
 /etc/letsencrypt/live/
+
+# Other files in /etc that typically do not need to be tracked
+/etc/nologin
+/etc/prelink.cache
+/etc/mtab.fuselock
+/etc/network/run
+/etc/udev/hwdb.bin
+/etc/lvm/cache
+/etc/lvm/archive
+/etc/X11/xdm/authdir/authfiles/*
+/etc/ntp.conf.dhcp
+/etc/.initctl
+/etc/webmin/fsdump/*.status
+/etc/webmin/webmin/oscache
+/etc/apparmor.d/cache/*
+/etc/service/*/supervise/*
+/etc/service/*/log/supervise/*
+/etc/sv/*/supervise/*
+/etc/sv/*/log/supervise/*
+*.elc
+*.pyc
+*.pyo
+/etc/init.d/.depend.*
+/etc/openvpn/openvpn-status.log
+/etc/cups/subscriptions.conf
+/etc/cups/subscriptions.conf.O
+/etc/fake-hwclock.data
+/etc/check_mk/logwatch.state
+
+# Extra editor temp files
+.*.sw?
+.sw?
+#*#
+DEADJOE
