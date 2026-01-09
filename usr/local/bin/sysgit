@@ -398,6 +398,7 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
             echo "Nom ou email manquant." >&2
             exit 1
           fi
+          mkdir -p "$(dirname "${profile_file}")"
           printf '%s|%s\n' "${profile_name}" "${profile_email}" >> "${profile_file}"
           selected_line="${profile_name}|${profile_email}"
         fi
@@ -406,6 +407,7 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
     profile_name="${selected_line%%|*}"
     profile_email="${selected_line#*|}"
     now_ts="$(date +%s)"
+    mkdir -p "$(dirname "${profile_history_file}")"
     printf '%s|%s|%s\n' "${now_ts}" "${profile_name}" "${fingerprint}" >> "${profile_history_file}"
     if [ -f "${profile_history_file}" ]; then
       cutoff="$((now_ts - 604800))"
