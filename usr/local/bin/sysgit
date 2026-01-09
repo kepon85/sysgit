@@ -18,13 +18,20 @@ CONFIG=/etc/sysgit.conf
 
 usage() {
   cat <<'EOF'
-Usage: sysgit [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
+Usage: sysgit [-apt] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
+  -apt         Commit automatique pour les hooks APT
   -c <config>  Chemin vers le fichier de configuration
   -p <profil>  Profil de commiteur (nom ou index)
   -u           Mettre a jour depuis le depot officiel et reinstaller
   -h           Afficher cette aide
 EOF
 }
+
+APT_MODE=0
+if [ "${1}" = "-apt" ]; then
+  APT_MODE=1
+  shift
+fi
 
 UPDATE_REQUESTED=0
 while getopts ":c:p:uh" opt; do
@@ -58,6 +65,12 @@ shift $((OPTIND - 1))
 
 if [ -f "${CONFIG}" ]; then
   . "${CONFIG}"
+fi
+
+if [ "${APT_MODE}" = "1" ]; then
+  ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A \
+    && "$0" commit -m "dpkg: $(date -Iseconds)" || true
+  exit 0
 fi
 
 run_update() {
