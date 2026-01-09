@@ -71,6 +71,7 @@ _sysgit() {
     COMP_WORDS=("${new_words[@]}")
     COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
     __git_main
+    COMPREPLY+=( $(compgen -W "ignore" -- "${cur}") )
 
     COMP_WORDS=("${saved_words[@]}")
     COMP_CWORD="${saved_cword}"

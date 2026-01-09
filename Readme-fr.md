@@ -1,5 +1,7 @@
 # sysgit
 
+![sysgit-logo](sysgit-small.png) 
+
 sysgit est un petit outil en ligne de commande qui permet à un·e admin système de versionner des fichiers de configuration dispersés sur le système (par exemple `/etc`, `/opt/monprojet/config`, `/srv/…`) dans un **seul dépôt Git**, sans réorganiser l’arborescence, en choisissant précisément ce qu’on souhaite suivre.
 
 L’idée : offrir l’équivalent d’un `etckeeper`, mais à l’échelle du système entier.
@@ -66,6 +68,9 @@ sysgit add /etc /usr/local/sbin /srv/monapp/config.yml
 sysgit status
 sysgit diff
 sysgit commit -m "État initial de la configuration système"
+
+# Éditer l'ignore global de sysgit
+sysgit ignore
 ```
 
 ## Options et intégrations
@@ -111,11 +116,13 @@ Paramètres fréquents :
 - `LOGOUT_CHECK` : ajoute un rappel de commit à la déconnexion.
 - `MULTI_GIT_COMMITTER` : gère des profils d'admins distincts.
 - `ALWAYS_ROOT` : relance automatiquement avec `sudo`.
+- `SYSGIT_IGNORE_FILE` : ignore global (défaut : `/etc/sysgit.ignore`).
+- `SYSGIT_IGNORE_TEMPLATE` : modèle pour pré-remplir l'ignore s'il est absent.
 
 ## Options en ligne de commande
 
 ```
-sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
+sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [ignore|init|git-args...]
 ```
 
 ## Licence

@@ -10,10 +10,12 @@ AUTOCOMMIT=0
 MULTI_GIT_COMMITTER=0
 MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
 MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
+SYSGIT_IGNORE_FILE=/etc/sysgit.ignore
+SYSGIT_IGNORE_TEMPLATE=/etc/sysgit.ignore_default
 INSTALL_PREFIX=/usr/local
 INSTALL_SYSCONFDIR=/etc
 UPDATE_REPO=https://framagit.org/kepon/sysgit.git
-UPDATE_BRANCH=master
+UPDATE_BRANCH=main
 
 
 # Load config file (system-wide defaults).
@@ -21,7 +23,7 @@ CONFIG=/etc/sysgit.conf
 
 usage() {
   cat <<'EOF'
-Usage: sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
+Usage: sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [ignore|init|git-args...]
   -apt         Commit automatique pour les hooks APT
   -autocommit  Snapshot automatique si AUTOCOMMIT=1
   -c <config>  Chemin vers le fichier de configuration
@@ -29,6 +31,46 @@ Usage: sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [init|g
   -u           Mettre a jour depuis le depot officiel et reinstaller
   -h           Afficher cette aide
 EOF
+}
+
+ensure_ignore_file() {
+  if [ -z "${SYSGIT_IGNORE_FILE}" ] || [ -f "${SYSGIT_IGNORE_FILE}" ]; then
+    return
+  fi
+  mkdir -p "$(dirname "${SYSGIT_IGNORE_FILE}")"
+  if [ -n "${SYSGIT_IGNORE_TEMPLATE}" ] && [ -f "${SYSGIT_IGNORE_TEMPLATE}" ]; then
+    cp "${SYSGIT_IGNORE_TEMPLATE}" "${SYSGIT_IGNORE_FILE}"
+  else
+    : > "${SYSGIT_IGNORE_FILE}"
+  fi
+  chmod 0644 "${SYSGIT_IGNORE_FILE}" 2>/dev/null || true
+}
+
+ensure_git_excludes_config() {
+  if [ -z "${SYSGIT_IGNORE_FILE}" ] || [ ! -f "${SYSGIT_IGNORE_FILE}" ]; then
+    return
+  fi
+  if [ -d "${SYSGIT_DIR}" ]; then
+    ${GIT} --git-dir="${SYSGIT_DIR}" config core.excludesfile "${SYSGIT_IGNORE_FILE}" 2>/dev/null || true
+  fi
+}
+
+open_in_editor() {
+  local target="${1}"
+  local editor="${VISUAL:-${EDITOR}}"
+
+  if [ -z "${editor}" ]; then
+    if command -v editor >/dev/null 2>&1; then
+      editor="editor"
+    elif command -v sensible-editor >/dev/null 2>&1; then
+      editor="sensible-editor"
+    else
+      editor="vi"
+    fi
+  fi
+
+  local editor_cmd=(${editor})
+  "${editor_cmd[@]}" "${target}"
 }
 
 # Dedicated mode for APT hooks.
@@ -80,6 +122,19 @@ shift $((OPTIND - 1))
 if [ -f "${CONFIG}" ]; then
   . "${CONFIG}"
 fi
+
+if [ "${1}" = "ignore" ]; then
+  if [ -z "${SYSGIT_IGNORE_FILE}" ]; then
+    echo "SYSGIT_IGNORE_FILE n'est pas configure." >&2
+    exit 1
+  fi
+  ensure_ignore_file
+  ensure_git_excludes_config
+  open_in_editor "${SYSGIT_IGNORE_FILE}"
+  exit $?
+fi
+
+ensure_git_excludes_config
 
 # Handle APT post-invoke hook.
 if [ "${APT_MODE}" = "1" ]; then
@@ -324,6 +379,8 @@ echo $GIT_AUTHOR_NAME;
 if [ "${1}" = "init" ]; then
     ${GIT} init --bare "${SYSGIT_DIR}"
     ${GIT} --git-dir="${SYSGIT_DIR}" config status.showUntrackedFiles no
+    ensure_ignore_file
+    ensure_git_excludes_config
     read -r -p "Ajouter /etc au suivi ? [y/N] " add_etc
     if [ "${add_etc}" = "y" ] || [ "${add_etc}" = "Y" ]; then
         ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -f /etc
@@ -335,7 +392,7 @@ if [ "${1}" = "init" ]; then
 fi
 
 if [ "${1}" = "commit" ]; then
-    ${GIT} ${GIT_COMMIT_OPTIONS] --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"
+    ${GIT} ${GIT_COMMIT_OPTIONS} --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"
 else
     # Delegate all other commands to git with the correct git-dir/work-tree.
     ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"

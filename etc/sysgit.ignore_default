@@ -1,0 +1,26 @@
+# sysgit ignore defaults
+# Modifiez /etc/sysgit.ignore selon vos besoins.
+
+# Editor swap/backup files
+*~
+*.swp
+*.swo
+*.swx
+.*.swp
+.*.swo
+.*.swx
+.swp
+.swo
+.swx
+.#
+
+# Volatile system files in /etc
+/etc/mtab
+/etc/adjtime
+/etc/ld.so.cache
+/etc/.pwd.lock
+/etc/resolv.conf
+
+# Let's Encrypt - auto-generated cert material
+/etc/letsencrypt/archive/
+/etc/letsencrypt/live/

@@ -29,3 +29,9 @@ MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
 
 # History file that stores the last profile per SSH/TTY fingerprint.
 MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
+
+# sysgit ignore file used as core.excludesfile.
+SYSGIT_IGNORE_FILE=/etc/sysgit.ignore
+
+# Template used to prefill the ignore file when it does not exist.
+SYSGIT_IGNORE_TEMPLATE=/etc/sysgit.ignore_default
