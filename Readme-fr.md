@@ -91,7 +91,7 @@ Fonctionnalités optionnelles pilotées par la config, avec un contexte d'usage 
   - À quoi ça sert : séparer l'identité Git des admins pour un historique clair.
   - Contexte : serveur partagé entre plusieurs admins, ou alternance prod/staging.
   - Activer `MULTI_GIT_COMMITTER=1` pour choisir/créer un profil.
-  - Forcer un profil avec `sysgit -p <nom-ou-index>`.
+  - Forcer un profil avec `sysgit -p <nom-ou-index>` (cree le profil si absent).
 - Hook APT/dpkg :
   - À quoi ça sert : enregistrer les changements liés aux mises à jour de paquets.
   - Contexte : audit rapide après un `apt upgrade` ou une installation critique.

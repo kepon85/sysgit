@@ -274,6 +274,7 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
   if [ "${uid}" -eq "0" ]; then
     profile_file="${MULTI_GIT_COMMITTER_PROFILE:-${SYSGIT_DIR}/sysgit.profile}"
     selected_line=""
+    selection_source=""
     profile_history_file="${MULTI_GIT_COMMITTER_PROFILE_HISTORY:-${SYSGIT_DIR}/sysgit.profile.history}"
     fingerprint=""
     if [ -n "${SSH_TTY}" ]; then
@@ -310,14 +311,46 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
         esac
       fi
       if [ -z "${selected_line}" ]; then
-        echo "Profil introuvable: ${PROFILE_ARG}" >&2
-        exit 1
+        profile_name=""
+        profile_email=""
+        case "${PROFILE_ARG}" in
+          *'|'*)
+            profile_name="${PROFILE_ARG%%|*}"
+            profile_email="${PROFILE_ARG#*|}"
+            ;;
+          *:*)
+            profile_name="${PROFILE_ARG%%:*}"
+            profile_email="${PROFILE_ARG#*:}"
+            ;;
+          *)
+            profile_name="${PROFILE_ARG}"
+            ;;
+        esac
+        if [ -t 0 ] && [ -t 1 ]; then
+          if [ -z "${profile_name}" ]; then
+            read -r -p "Nom: " profile_name
+          fi
+          if [ -z "${profile_email}" ]; then
+            read -r -p "Email: " profile_email
+          fi
+        fi
+        if [ -z "${profile_name}" ] || [ -z "${profile_email}" ]; then
+          echo "Nom ou email manquant." >&2
+          exit 1
+        fi
+        mkdir -p "$(dirname "${profile_file}")"
+        printf '%s|%s\n' "${profile_name}" "${profile_email}" >> "${profile_file}"
+        selected_line="${profile_name}|${profile_email}"
       fi
+      selection_source="forced"
     fi
     if [ -z "${selected_line}" ] && [ -n "${fingerprint}" ] && [ -f "${profile_history_file}" ] && [ -f "${profile_file}" ]; then
       history_profile="$(awk -F'|' -v fp="${fingerprint}" '$3 == fp {p=$2} END {print p}' "${profile_history_file}")"
       if [ -n "${history_profile}" ]; then
         selected_line="$(grep -m1 "^${history_profile}|" "${profile_file}")"
+        if [ -n "${selected_line}" ]; then
+          selection_source="history"
+        fi
       fi
     fi
     if [ -z "${selected_line}" ]; then
@@ -369,11 +402,21 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
     : "${GIT_AUTHOR_NAME:=${profile_name}}"
     : "${GIT_COMMITTER_EMAIL:=${profile_email}}"
     : "${GIT_AUTHOR_EMAIL:=${profile_email}}"
+    if [ "${selection_source}" = "history" ] && [ -t 1 ]; then
+      color_start=""
+      color_end=""
+      if command -v tput >/dev/null 2>&1; then
+        color_start="$(tput setaf 6)"
+        color_end="$(tput sgr0)"
+      else
+        color_start=$'\033[36m'
+        color_end=$'\033[0m'
+      fi
+      printf '%sEn tant que%s %s <%s> (preciser -p pour changer)\n' \
+        "${color_start}" "${color_end}" "${profile_name}" "${profile_email}"
+    fi
   fi
 fi
-
-# Debug/visibility of selected author name.
-echo $GIT_AUTHOR_NAME;
 
 # Initialize the bare repository and optionally add /etc.
 if [ "${1}" = "init" ]; then
