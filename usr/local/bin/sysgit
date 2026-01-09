@@ -311,6 +311,7 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
         esac
       fi
       if [ -z "${selected_line}" ]; then
+        create_profile=1
         profile_name=""
         profile_email=""
         case "${PROFILE_ARG}" in
@@ -327,22 +328,34 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
             ;;
         esac
         if [ -t 0 ] && [ -t 1 ]; then
-          if [ -z "${profile_name}" ]; then
-            read -r -p "Nom: " profile_name
+          read -r -p "Profil introuvable: ${PROFILE_ARG}. Creer le profil ${profile_name} ? [o/N] " create_choice
+          if [[ ! "${create_choice}" =~ ^[Oo]$ ]]; then
+            create_profile=0
           fi
-          if [ -z "${profile_email}" ]; then
-            read -r -p "Email: " profile_email
+          if [ "${create_profile}" = "1" ]; then
+            if [ -z "${profile_name}" ]; then
+              read -r -p "Nom: " profile_name
+            fi
+            if [ -z "${profile_email}" ]; then
+              read -r -p "Entrer son e-mail: " profile_email
+            fi
           fi
         fi
-        if [ -z "${profile_name}" ] || [ -z "${profile_email}" ]; then
-          echo "Nom ou email manquant." >&2
-          exit 1
+        if [ "${create_profile}" = "1" ]; then
+          if [ -z "${profile_name}" ] || [ -z "${profile_email}" ]; then
+            echo "Nom ou email manquant." >&2
+            exit 1
+          fi
+          mkdir -p "$(dirname "${profile_file}")"
+          printf '%s|%s\n' "${profile_name}" "${profile_email}" >> "${profile_file}"
+          selected_line="${profile_name}|${profile_email}"
+        else
+          PROFILE_ARG=""
         fi
-        mkdir -p "$(dirname "${profile_file}")"
-        printf '%s|%s\n' "${profile_name}" "${profile_email}" >> "${profile_file}"
-        selected_line="${profile_name}|${profile_email}"
       fi
-      selection_source="forced"
+      if [ -n "${selected_line}" ]; then
+        selection_source="forced"
+      fi
     fi
     if [ -z "${selected_line}" ] && [ -n "${fingerprint}" ] && [ -f "${profile_history_file}" ] && [ -f "${profile_file}" ]; then
       history_profile="$(awk -F'|' -v fp="${fingerprint}" '$3 == fp {p=$2} END {print p}' "${profile_history_file}")"
