@@ -12,17 +12,17 @@ GIT_COMMIT_OPTIONS="--no-gpg-sign"
 SYSGIT_DIR=/var/lib/sysgit
 
 # If set to 1/true, sysgit re-executes itself via sudo to always run as root.
-ALWAYS_ROOT=0
+ALWAYS_ROOT=1
 
 # If set to 1/true, sysgit injects a logout reminder in ~/.bash_logout
 # to show pending changes and optionally prompt for a commit.
-LOGOUT_CHECK=0
+LOGOUT_CHECK=1
 
 # If set to 1/true, sysgit -autocommit will create snapshots when changes exist.
-AUTOCOMMIT=0
+AUTOCOMMIT=1
 
 # Enable multiple git committer profiles (interactive selection on each run).
-MULTI_GIT_COMMITTER=1
+MULTI_GIT_COMMITTER=0
 
 # File that stores profile list (format: "Name|email").
 MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
