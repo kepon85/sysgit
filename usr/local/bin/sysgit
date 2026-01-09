@@ -1,25 +1,27 @@
 #!/bin/bash
 
-# Default config
+# Default config values (can be overridden by /etc/sysgit.conf or -c).
 GIT=/usr/bin/git
 SYSGIT_DIR=/var/lib/sysgit
 ALWAYS_ROOT=0
+LOGOUT_CHECK=0
+AUTOCOMMIT=0
+MULTI_GIT_COMMITTER=0
+MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
+MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
 INSTALL_PREFIX=/usr/local
 INSTALL_SYSCONFDIR=/etc
 UPDATE_REPO=https://framagit.org/kepon/sysgit.git
 UPDATE_BRANCH=master
-MULTI_GIT_COMMITTER=0
-MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
-MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
-LOGOUT_CHECK=0
 
-# Load config file
+# Load config file (system-wide defaults).
 CONFIG=/etc/sysgit.conf
 
 usage() {
   cat <<'EOF'
-Usage: sysgit [-apt] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
+Usage: sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
   -apt         Commit automatique pour les hooks APT
+  -autocommit  Snapshot automatique si AUTOCOMMIT=1
   -c <config>  Chemin vers le fichier de configuration
   -p <profil>  Profil de commiteur (nom ou index)
   -u           Mettre a jour depuis le depot officiel et reinstaller
@@ -27,12 +29,21 @@ Usage: sysgit [-apt] [-c <config>] [-p <profil>] [-u] [-h] [init|git-args...]
 EOF
 }
 
+# Dedicated mode for APT hooks.
 APT_MODE=0
 if [ "${1}" = "-apt" ]; then
   APT_MODE=1
   shift
 fi
 
+# Dedicated mode for systemd/cron autocommit snapshots.
+AUTOCOMMIT_MODE=0
+if [ "${1}" = "-autocommit" ]; then
+  AUTOCOMMIT_MODE=1
+  shift
+fi
+
+# Standard option parsing (-c/-p/-u/-h).
 UPDATE_REQUESTED=0
 while getopts ":c:p:uh" opt; do
   case "${opt}" in
@@ -63,16 +74,32 @@ while getopts ":c:p:uh" opt; do
 done
 shift $((OPTIND - 1))
 
+# Load overrides from config if present.
 if [ -f "${CONFIG}" ]; then
   . "${CONFIG}"
 fi
 
+# Handle APT post-invoke hook.
 if [ "${APT_MODE}" = "1" ]; then
   ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A \
     && "$0" commit -m "dpkg: $(date -Iseconds)" || true
   exit 0
 fi
 
+# Handle timed snapshots when AUTOCOMMIT is enabled.
+if [ "${AUTOCOMMIT_MODE}" = "1" ]; then
+  if [ "${AUTOCOMMIT}" = "0" ] || [ "${AUTOCOMMIT}" = "false" ]; then
+    exit 0
+  fi
+  if ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A; then
+    if [ -n "$(${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ status --porcelain)" ]; then
+      "$0" commit -m "sysgit auto: $(date -Iseconds)" || true
+    fi
+  fi
+  exit 0
+fi
+
+# Self-update by pulling the configured repo and running its installer.
 run_update() {
   if [ "$(id -u)" -ne 0 ]; then
     exec sudo -u root "$0" -u -c "${CONFIG}"
@@ -101,6 +128,7 @@ if [ "${UPDATE_REQUESTED}" = "1" ]; then
   run_update
 fi
 
+# Force root execution if configured.
 if [ "${ALWAYS_ROOT}" = "1" ] || [ "${ALWAYS_ROOT}" = "true" ]; then
   uid="$(id -u)"
   if [ "${uid}" -ne "0" ]; then
@@ -166,7 +194,7 @@ EOF
 }
 ensure_logout_check
 
-# Configuration des variables d'environnement Git pour le commiteur
+# Set git author/committer environment based on the sudo user.
 if [ -n "${SUDO_USER}" ]; then
   homedir="$(getent passwd "${SUDO_USER}" | cut -d: -f 6)"
   git_config_file="${homedir}/.gitconfig"
@@ -183,7 +211,7 @@ if [ -n "${SUDO_USER}" ]; then
   : "${GIT_AUTHOR_NAME:=${SUDO_USER}}"
 fi
 
-# Gestion des profils multiples de commiteurs git
+# Optional multiple committer profiles (root, interactive).
 if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_GIT_COMMITTER}" = "true" ]; }; then
   uid="$(id -u)"
   if [ "${uid}" -eq "0" ]; then
@@ -287,8 +315,10 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
   fi
 fi
 
+# Debug/visibility of selected author name.
 echo $GIT_AUTHOR_NAME;
 
+# Initialize the bare repository and optionally add /etc.
 if [ "${1}" = "init" ]; then
     ${GIT} init --bare "${SYSGIT_DIR}"
     ${GIT} --git-dir="${SYSGIT_DIR}" config status.showUntrackedFiles no
@@ -302,4 +332,5 @@ if [ "${1}" = "init" ]; then
     exit $?
 fi
 
+# Delegate all other commands to git with the correct git-dir/work-tree.
 ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ "$@"

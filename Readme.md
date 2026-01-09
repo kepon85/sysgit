@@ -1,61 +1,94 @@
 # sysgit
 
-sysgit est un petit outil en ligne de commande qui permet à un·e admin système de versionner des fichiers de configuration dispersés sur le système (par exemple `/etc`, `/opt/monprojet/config`, `/srv/…`) dans un **seul dépôt Git**, sans réorganiser l’arborescence.
+sysgit is a small command-line tool that lets a sysadmin version scattered configuration files across the system (for example `/etc`, `/opt/myproject/config`, `/srv/...`) into a **single Git repository**, without reorganizing the filesystem.
 
-L’idée : offrir l’équivalent d’un `etckeeper`, mais à l’échelle du système entier.
+The idea: provide the equivalent of `etckeeper`, but for the entire system.
 
-## Objectif
+## Goal
 
-- Garder un **historique clair** des modifications de fichiers sensibles.
-- Pouvoir répondre à :  
-  – « Qui a changé quoi et quand ? »  
-  – « À quoi ressemblait ce fichier il y a 3 jours ? »  
-- Sans imposer un outil lourd de gestion de configuration.
+- Keep a **clear history** of sensitive file changes.
+- Answer:
+  - "Who changed what, and when?"
+  - "What did this file look like 3 days ago?"
+- Without imposing a heavy configuration management stack.
 
-sysgit ne remplace pas Ansible/Puppet/etc. Il fournit un **journal minimaliste**, basé sur Git, pour les admins qui bricolent aussi directement sur leurs serveurs.
+sysgit does not replace Ansible/Puppet/etc. It provides a **minimal Git-based journal** for admins who still make direct changes on their servers.
 
-## Principe
+## How it works
 
-- sysgit utilise un dépôt Git “nu” (`--bare`) stocké hors de l’arborescence système (par ex. `/root/.sysgit`).
-- Le **work-tree** de Git est positionné sur `/` :
-  - Git voit tout le système de fichiers.
-  - sysgit ajoute uniquement les chemins explicitement déclarés.
-- Les commandes fournies par sysgit encapsulent Git avec les bons paramètres (`--git-dir` / `--work-tree`) et quelques réglages utiles (par exemple `status.showUntrackedFiles=no`).
+- sysgit uses a bare Git repository (`--bare`) stored outside the system tree (default: `/var/lib/sysgit`).
+- Git's **work-tree** is set to `/`:
+  - Git can see the whole filesystem.
+  - sysgit only tracks paths you explicitly add.
+- sysgit wraps Git with the right parameters (`--git-dir` / `--work-tree`) and a few useful defaults (for example `status.showUntrackedFiles=no`).
 
-En résumé :  
-> Un seul dépôt Git, plusieurs chemins suivis, aucune réorganisation des fichiers existants.
+In short:
+> One Git repository, many tracked paths, no reorganization of existing files.
 
-
-## Fonctionnalités prévues
-
-- Initialisation du dépôt système :
-  - `sysgit init`  
-- Déclaration de fichiers ou répertoires à suivre :
-  - `sysgit add /etc /root/bin /srv/monapp/config.yml`
-- Consultation de l’état :
-  - `sysgit status`  
-  - `sysgit diff`  
-  - `sysgit log`
-- Commit rapide des changements :
-  - `sysgit commit -m "message"`
-- Intégration optionnelle :
-  - Hooks APT/dpkg pour committer après des mises à jour de paquets.
-  - Timer systemd / cron pour des snapshots automatiques (par exemple chaque nuit).
-
-sysgit reste volontairement fin : tout ce qui touche à la politique de commit (fréquence, message, hooks) est configurable.
-
----
-
-## Exemple d’usage
-
-Initialisation :
+## Install
 
 ```bash
-# Initialiser le dépôt “système”
+make install
+```
+
+Custom install paths:
+
+```bash
+make install PREFIX=/usr/local SYSCONFDIR=/etc DESTDIR=/tmp/pkgroot
+```
+
+This installs:
+- `sysgit` into `PREFIX/bin`
+- the default config into `/etc/sysgit.conf_default`
+- a live config if `/etc/sysgit.conf` does not already exist
+- APT hook and systemd timer/service units for optional integrations
+
+## Usage
+
+```bash
+# Initialize the system repository
 sysgit init
 
-# Commencer à suivre quelques chemins
-sysgit add /etc /usr/local/sbin /srv/monapp/config.yml
+# Start tracking a few paths
+sysgit add /etc /usr/local/sbin /srv/myapp/config.yml
 
-# Premier commit
-sysgit commit -m "État initial de la configuration système"
+# Review and commit changes
+sysgit status
+sysgit diff
+sysgit commit -m "Initial system configuration"
+```
+
+## Options and integrations
+
+These are optional features controlled by config flags:
+
+- Autocommit snapshots:
+  - Set `AUTOCOMMIT=1`, then enable the timer:
+    - `systemctl enable --now sysgit-autocommit.timer`
+  - Or run `sysgit -autocommit` manually.
+- Logout check:
+  - Set `LOGOUT_CHECK=1` to inject a logout reminder in `~/.bash_logout`.
+- Multiple committer profiles:
+  - Set `MULTI_GIT_COMMITTER=1` to select or create profiles.
+  - Use `sysgit -p <name-or-index>` to force a profile.
+- APT/Dpkg hook:
+  - The hook runs `sysgit -apt` after package operations.
+- Self-update:
+  - `sysgit -u` pulls from the configured repo/branch and reinstalls.
+- Always root:
+  - Set `ALWAYS_ROOT=1` to auto-reexec via `sudo`.
+
+## Configuration
+
+Edit `/etc/sysgit.conf` (based on `/etc/sysgit.conf_default`).
+
+Common settings:
+- `SYSGIT_DIR`: location of the bare repo (default: `/var/lib/sysgit`)
+- `GIT`: path to the git binary
+- `AUTOCOMMIT`, `LOGOUT_CHECK`, `MULTI_GIT_COMMITTER`, `ALWAYS_ROOT`
+
+## Command-line flags
+
+```
+sysgit [-apt] [-autocommit] [-c <config>] [-p <profile>] [-u] [-h] [init|git-args...]
+```

@@ -1,9 +1,28 @@
 
+# sysgit configuration file (defaults)
+# Copy to /etc/sysgit.conf and edit as needed.
+
+# Path to the git binary used by sysgit.
 GIT=/usr/bin/git
+
+# Bare repository location that stores the system history.
 SYSGIT_DIR=/var/lib/sysgit
+
+# If set to 1/true, sysgit re-executes itself via sudo to always run as root.
 ALWAYS_ROOT=0
+
+# If set to 1/true, sysgit injects a logout reminder in ~/.bash_logout
+# to show pending changes and optionally prompt for a commit.
 LOGOUT_CHECK=0
 
+# If set to 1/true, sysgit -autocommit will create snapshots when changes exist.
+AUTOCOMMIT=0
+
+# Enable multiple git committer profiles (interactive selection on each run).
 MULTI_GIT_COMMITTER=1
+
+# File that stores profile list (format: "Name|email").
 MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
+
+# History file that stores the last profile per SSH/TTY fingerprint.
 MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history

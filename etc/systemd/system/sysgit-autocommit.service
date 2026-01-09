@@ -1,0 +1,6 @@
+[Unit]
+Description=Sysgit autocommit snapshot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sysgit -autocommit

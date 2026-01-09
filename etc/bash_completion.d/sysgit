@@ -41,7 +41,7 @@ _sysgit() {
   esac
 
   if [[ "${cur}" == -* ]]; then
-    COMPREPLY=( $(compgen -W "-c -p -u -h" -- "${cur}") )
+    COMPREPLY=( $(compgen -W "-apt -autocommit -c -p -u -h" -- "${cur}") )
     return
   fi
 
@@ -60,7 +60,7 @@ _sysgit() {
         -c|-p)
           skip_next=1
           ;;
-        -u|-h)
+        -u|-h|-apt|-autocommit)
           ;;
         *)
           new_words+=("${COMP_WORDS[i]}")
