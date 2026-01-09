@@ -125,6 +125,20 @@ Paramètres fréquents :
 sysgit [-apt] [-autocommit] [-c <config>] [-p <profil>] [-u] [-h] [ignore|init|git-args...]
 ```
 
+## Hooks Git (pre/post-commit, pre/post-push)
+
+Les hooks Git se placent dans le dépôt bare de sysgit :
+`SYSGIT_DIR/hooks` (par défaut `/var/lib/sysgit/hooks`).
+
+Comment ça marche :
+- Créez un script exécutable nommé `pre-commit`, `post-commit`, `pre-push`,
+  `post-push`, etc.
+- Git exécute automatiquement ces scripts quand la commande correspondante est
+  appelée via `sysgit` (par exemple `sysgit commit` ou `sysgit push`).
+- Utilisez-les pour ajouter des contrôles, des notifications, des exports ou
+  des actions d'audit.
+- Des exemples sont fournis dans `hooks/*.sample` (à copier/adapter).
+
 ## Licence
 
 Beerware. Auteur : David Mercereau.
