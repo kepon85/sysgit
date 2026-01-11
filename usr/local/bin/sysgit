@@ -441,10 +441,10 @@ if [ "${1}" = "init" ]; then
     ensure_git_excludes_config
     read -r -p "Ajouter /etc au suivi ? [y/N] " add_etc
     if [ "${add_etc}" = "y" ] || [ "${add_etc}" = "Y" ]; then
-        ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -f /etc
-        echo "Ajoute /etc. Pour suivre d'autres repertoires: $0 add -f /chemin"
+        ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A /etc
+        echo "Ajoute /etc. Pour suivre d'autres repertoires: $0 add /chemin"
     else
-        echo "Vous pouvez suivre d'autres repertoires avec: $0 add -f /chemin"
+        echo "Vous pouvez suivre d'autres repertoires avec: $0 add /chemin"
     fi
     exit $?
 fi
