@@ -30,6 +30,8 @@
 # Let's Encrypt - auto-generated cert material
 /etc/letsencrypt/archive/
 /etc/letsencrypt/live/
+/etc/letsencrypt/keys/
+/etc/letsencrypt/csr/
 
 # Other files in /etc that typically do not need to be tracked
 /etc/nologin
