@@ -1,13 +1,40 @@
 #!/bin/bash
 
+_sysgit_config_value() {
+  local key="${1}"
+  local config="${2}"
+
+  awk -F= -v key="${key}" '
+    $0 ~ "^[[:space:]]*"key"[[:space:]]*=" {
+      val=$2
+      sub(/^[[:space:]]+/, "", val)
+      gsub(/[\"\047]/, "", val)
+      sub(/[[:space:]]+$/, "", val)
+      print val
+    }' "${config}" | tail -n1
+}
+
+_sysgit_get_config() {
+  local config="/etc/sysgit.conf"
+  local i
+
+  for ((i=1; i<${#COMP_WORDS[@]}; i++)); do
+    if [[ "${COMP_WORDS[i]}" == "-c" && -n "${COMP_WORDS[i+1]}" ]]; then
+      config="${COMP_WORDS[i+1]}"
+    fi
+  done
+
+  echo "${config}"
+}
+
 _sysgit_profiles() {
   local cur="${1}"
   local profile_file="/var/lib/sysgit/sysgit.profile"
-  local config="/etc/sysgit.conf"
+  local config="$(_sysgit_get_config)"
   local cfg_profile=""
 
   if [[ -r "${config}" ]]; then
-    cfg_profile="$(awk -F= '/^[[:space:]]*MULTI_GIT_COMMITTER_PROFILE=/{gsub(/[\"\047]/,"",$2); gsub(/[[:space:]]+/,"",$2); print $2}' "${config}" | tail -n1)"
+    cfg_profile="$(_sysgit_config_value "MULTI_GIT_COMMITTER_PROFILE" "${config}")"
     if [[ -n "${cfg_profile}" ]]; then
       profile_file="${cfg_profile}"
     fi
@@ -50,6 +77,10 @@ _sysgit() {
     local new_words=("git")
     local saved_words=("${COMP_WORDS[@]}")
     local saved_cword="${COMP_CWORD}"
+    local config="$(_sysgit_get_config)"
+    local sysgit_dir="/var/lib/sysgit"
+    local work_tree="/"
+    local cfg_dir=""
 
     for ((i=1; i<${#COMP_WORDS[@]}; i++)); do
       if ((skip_next)); then
@@ -68,9 +99,16 @@ _sysgit() {
       esac
     done
 
+    if [[ -r "${config}" ]]; then
+      cfg_dir="$(_sysgit_config_value "SYSGIT_DIR" "${config}")"
+      if [[ -n "${cfg_dir}" ]]; then
+        sysgit_dir="${cfg_dir}"
+      fi
+    fi
+
     COMP_WORDS=("${new_words[@]}")
     COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
-    __git_main
+    GIT_DIR="${sysgit_dir}" GIT_WORK_TREE="${work_tree}" __git_main
     COMPREPLY+=( $(compgen -W "ignore" -- "${cur}") )
 
     COMP_WORDS=("${saved_words[@]}")
