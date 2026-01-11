@@ -139,6 +139,38 @@ Comment ça marche :
   des actions d'audit.
 - Des exemples sont fournis dans `hooks/*.sample` (à copier/adapter).
 
+## Migration depuis etckeeper
+
+Si vous avez deja un depot etckeeper dans `/etc/.git`, vous pouvez importer
+son historique dans sysgit sans perdre le "passif" :
+
+```bash
+# En tant que root
+./etckeeper-migrate.sh
+```
+
+Notes :
+- Le script ajoute le prefixe `/etc` a tous les commits etckeeper puis les
+  fusionne dans sysgit (branche `etckeeper-migrate`).
+- La fusion utilise une strategie "ours" pour eviter les conflits (l'etat
+  courant sysgit est conserve, l'historique etckeeper reste accessible).
+- Le depot sysgit ne doit pas encore etre initialise (pas de `sysgit init`)
+  avant la migration.
+- Apres import, vous pouvez aligner l'etat courant :
+  `sysgit add -A /etc && sysgit commit -m "Sync /etc"`.
+- Si vous n'utilisez plus etckeeper, stoppez-le et supprimez `/etc/.git`
+  (ou ajoutez-le a `SYSGIT_IGNORE_FILE`).
+
+Exemple de sequence qui fonctionne :
+
+```bash
+bash etckeeper-migrate.sh
+rm -rf /etc/.git
+sysgit init
+git add .
+sysgit commit -m "etckeeper-migrate"
+```
+
 ## Licence
 
 Beerware. Auteur : David Mercereau.

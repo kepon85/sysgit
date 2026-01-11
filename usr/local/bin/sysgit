@@ -435,7 +435,11 @@ fi
 
 # Initialize the bare repository and optionally add /etc.
 if [ "${1}" = "init" ]; then
-    ${GIT} init --bare "${SYSGIT_DIR}"
+    if ! [ -d "${SYSGIT_DIR}" ]; then
+        ${GIT} init --bare "${SYSGIT_DIR}"
+    else
+      echo "Le depot sysgit existe deja: ${SYSGIT_DIR}"
+    fi
     ${GIT} --git-dir="${SYSGIT_DIR}" config status.showUntrackedFiles no
     ensure_ignore_file
     ensure_git_excludes_config

@@ -142,6 +142,38 @@ How it works:
 - Use hooks to enforce checks, send notifications, export snapshots, or audit.
 - Sample hooks are available in `hooks/*.sample` (copy and adapt).
 
+## Migrating from etckeeper
+
+If you already have an etckeeper repository in `/etc/.git`, you can import its
+history into sysgit:
+
+```bash
+# As root
+./etckeeper-migrate.sh
+```
+
+Notes:
+- The script prefixes all etckeeper paths with `/etc` and merges them into
+  sysgit (branch `etckeeper-migrate`).
+- The merge uses the "ours" strategy to avoid conflicts (current sysgit state
+  is kept, etckeeper history remains accessible).
+- The sysgit repository must not be initialized yet (do not run `sysgit init`)
+  before the migration.
+- After import, you may want to sync current state:
+  `sysgit add -A /etc && sysgit commit -m "Sync /etc"`.
+- If you no longer use etckeeper, disable it and remove `/etc/.git`
+  (or add it to `SYSGIT_IGNORE_FILE`).
+
+Example sequence that works:
+
+```bash
+bash etckeeper-migrate.sh
+rm -rf /etc/.git
+sysgit init
+git add .
+sysgit commit -m "etckeeper-migrate"
+```
+
 ## License
 
 Beerware. Author: David Mercereau.
