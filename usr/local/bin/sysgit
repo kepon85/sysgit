@@ -418,10 +418,10 @@ if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_G
       cutoff="$((now_ts - 604800))"
       awk -F'|' -v cutoff="${cutoff}" '($1 + 0) >= cutoff' "${profile_history_file}" > "${profile_history_file}.tmp" && mv "${profile_history_file}.tmp" "${profile_history_file}"
     fi
-    : "${GIT_COMMITTER_NAME:=${profile_name}}"
-    : "${GIT_AUTHOR_NAME:=${profile_name}}"
-    : "${GIT_COMMITTER_EMAIL:=${profile_email}}"
-    : "${GIT_AUTHOR_EMAIL:=${profile_email}}"
+    export GIT_COMMITTER_NAME="${profile_name}"
+    export GIT_AUTHOR_NAME="${profile_name}"
+    export GIT_COMMITTER_EMAIL="${profile_email}"
+    export GIT_AUTHOR_EMAIL="${profile_email}"
     if [ "${selection_source}" = "history" ] && [ -t 1 ]; then
       color_start=""
       color_end=""
