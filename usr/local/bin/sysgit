@@ -148,7 +148,7 @@ if [ "${AUTOCOMMIT_MODE}" = "1" ]; then
   if [ "${AUTOCOMMIT}" = "0" ] || [ "${AUTOCOMMIT}" = "false" ]; then
     exit 0
   fi
-  if ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A; then
+  if ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -u; then
     if [ -n "$(${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ status --porcelain)" ]; then
       "$0" commit -m "sysgit auto: $(date -Iseconds)" || true
     fi
