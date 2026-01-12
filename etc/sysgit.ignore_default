@@ -31,6 +31,7 @@
 /etc/letsencrypt/live/*
 /etc/letsencrypt/keys/*
 /etc/letsencrypt/csr/*
+/etc/letsencrypt/renewal/*
 
 # Other files in /etc that typically do not need to be tracked
 /etc/.#*
