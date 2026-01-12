@@ -138,7 +138,7 @@ ensure_git_excludes_config
 
 # Handle APT post-invoke hook.
 if [ "${APT_MODE}" = "1" ]; then
-  ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -A \
+  ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -u \
     && "$0" commit -m "dpkg: $(date -Iseconds)" || true
   exit 0
 fi
