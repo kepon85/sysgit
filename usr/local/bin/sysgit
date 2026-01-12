@@ -251,6 +251,11 @@ EOF
 }
 ensure_logout_check
 
+# Check whether the sysgit repository is initialized.
+is_sysgit_repo_ready() {
+  [ -d "${SYSGIT_DIR}" ] && [ -f "${SYSGIT_DIR}/HEAD" ]
+}
+
 # Set git author/committer environment based on the sudo user.
 if [ -n "${SUDO_USER}" ]; then
   homedir="$(getent passwd "${SUDO_USER}" | cut -d: -f 6)"
@@ -269,7 +274,7 @@ if [ -n "${SUDO_USER}" ]; then
 fi
 
 # Optional multiple committer profiles (root, interactive).
-if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_GIT_COMMITTER}" = "true" ]; }; then
+if [ -z "${SUDO_USER}" ] && { [ "${MULTI_GIT_COMMITTER}" = "1" ] || [ "${MULTI_GIT_COMMITTER}" = "true" ]; } && is_sysgit_repo_ready; then
   uid="$(id -u)"
   if [ "${uid}" -eq "0" ]; then
     profile_file="${MULTI_GIT_COMMITTER_PROFILE:-${SYSGIT_DIR}/sysgit.profile}"
