@@ -47,9 +47,6 @@ ensure_privileges() {
 
 fetch_sources() {
   workdir="$(mktemp -d /tmp/sysgit-install.XXXXXX)"
-  cleanup() { rm -rf "${workdir}"; }
-  trap cleanup EXIT
-
   if have_cmd git; then
     git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${workdir}" >/dev/null
     echo "${workdir}"
@@ -80,6 +77,7 @@ install_sysgit() {
 ensure_tools
 ensure_privileges
 srcdir="$(fetch_sources)"
+trap 'rm -rf "${srcdir}"' EXIT
 install_sysgit "${srcdir}"
 echo "sysgit installed (PREFIX=${PREFIX}, SYSCONFDIR=${SYSCONFDIR})"
 if [ -z "${DESTDIR}" ]; then
