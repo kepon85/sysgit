@@ -33,6 +33,16 @@ In short:
 
 ## Install
 
+Quick install (two commands):
+
+```bash
+wget -O /tmp/sysgit-install.sh https://framagit.org/kepon/sysgit/-/raw/main/install.sh
+sudo bash /tmp/sysgit-install.sh
+```
+
+The script checks for `make` and a downloader (git/curl/wget), fetches the repo, then runs `make install`.
+You can override paths or sources: `PREFIX=/opt SYSCONFDIR=/etc SYSGIT_BRANCH=main SYSGIT_REPO_URL=https://framagit.org/kepon/sysgit.git bash install.sh`.
+
 ```bash
 make install
 ```

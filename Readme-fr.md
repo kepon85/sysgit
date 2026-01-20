@@ -29,13 +29,25 @@ En résumé :
 
 ## Installation
 
+Installation rapide (2 commandes) :
+
+```bash
+wget -O /tmp/sysgit-install.sh https://framagit.org/kepon/sysgit/-/raw/main/install.sh
+sudo bash /tmp/sysgit-install.sh
+```
+
+Le script vérifie `make` + un outil de téléchargement (git/curl/wget), récupère le dépôt puis lance `make install`.
+Variables utiles : `PREFIX=/opt SYSCONFDIR=/etc SYSGIT_BRANCH=main SYSGIT_REPO_URL=https://framagit.org/kepon/sysgit.git bash install.sh`.
+
 ```bash
 make install
 ```
 
-Installation avec chemins personnalisés :
+Installation personnalisés :
 
 ```bash
+git clone https://framagit.org/kepon/sysgit.git
+cd sysgit
 make install PREFIX=/usr/local SYSCONFDIR=/etc DESTDIR=/tmp/pkgroot
 ```
 
@@ -69,9 +81,23 @@ sysgit status
 sysgit diff
 sysgit commit -m "État initial de la configuration système"
 
+# Revenir à l'état du dernier commit (staging et fichier)
+sysgit restore --staged -- /etc/maconf
+sysgit checkout -- /etc/maconf
+
 # Éditer l'ignore global de sysgit
 sysgit ignore
+# Arrêter de suivre un fichier déjà versionné après l'avoir ajouté à l'ignore
+sysgit rm -r --cached -- /etc/getmail
 ```
+
+## Rappels Git utiles avec sysgit
+
+- `sysgit status --short` : aperçu rapide de ce qui est modifié sur le système.
+- `sysgit add -u` : indexer toutes les modifications de fichiers déjà suivis (pratique en cron).
+- `sysgit rm --cached -- /chemin` : après avoir ajouté un fichier à l'ignore, le retirer de l'index pour qu'il ne soit plus tracké.
+- `sysgit log --oneline -p` : relire rapidement qui a modifié quoi (avec le diff).
+- `sysgit restore --staged -- /chemin` ou `sysgit checkout -- /chemin` : revenir à l'état du dernier commit si une modification n'est pas souhaitée.
 
 ## Options et intégrations
 
@@ -89,9 +115,44 @@ Fonctionnalités optionnelles pilotées par la config, avec un contexte d'usage 
   - Activer `LOGOUT_CHECK=1` pour ajouter un rappel dans `~/.bash_logout`.
 - Profils multiples :
   - À quoi ça sert : séparer l'identité Git des admins pour un historique clair.
-  - Contexte : serveur partagé entre plusieurs admins, ou alternance prod/staging.
-  - Activer `MULTI_GIT_COMMITTER=1` pour choisir/créer un profil.
-  - Forcer un profil avec `sysgit -p <nom-ou-index>` (cree le profil si absent).
+  - Contexte : serveur partagé entre plusieurs admins, ou alternance prod/staging. sysgit mémorise la provenance (SSH_CLIENT/SSH_CONNECTION/TTY) dans `sysgit.profile.history` et rattache automatiquement, pendant 7 jours, le dernier profil utilisé depuis la même source. Pratique sur un bastion ou une session tmux/screen qui vit longtemps.
+  - Activer `MULTI_GIT_COMMITTER=1` pour choisir/créer un profil interactif dans `SYSGIT_DIR/sysgit.profile` au format `Nom|email`.
+  - Forcer ou créer un profil explicitement (y compris en non-interactif) avec `sysgit -p "Nom|email@example.org"` ou `sysgit -p <index>` (l'index correspond à la ligne du fichier de profils). Cela évite d'avoir des commits "root" anonymes dans les hooks ou cron.
+```
+root@srvmail:~# sysgit status
+Choisir un profil:
+ 1) David - david.*********@retzien.fr
+ 0) Creer un nouveau profil
+Votre choix: 0
+Nom: Serge
+Email: serge.*********@retzien.fr
+Sur la branche master
+Modifications qui ne seront pas validées :
+  (utilisez "git add <fichier>..." pour mettre à jour ce qui sera validé)
+  (utilisez "git restore <fichier>..." pour annuler les modifications dans le répertoire de travail)
+	modifié :         ../etc/sympa/sympa_transport
+	modifié :         ../etc/sympa/sympa_transport.db
+
+aucune modification n'a été ajoutée à la validation (utilisez "git add" ou "git commit -a")
+root@srvmail:~# sysgit add /etc/sympa/sympa_transport*
+En tant que Serge <serge.*********@retzien.fr> (preciser -p pour changer)
+root@srvmail:~# sysgit commit -m "Suppressoin de mailing liste"
+En tant que Serge <serge.*********@retzien.fr> (preciser -p pour changer)
+sending incremental file list
+root@srvmail:~# sysgit log
+En tant que Serge <serge.*********@retzien.fr> (preciser -p pour changer)
+commit 428bb2401993b91e90a4dabac53d8d129fb378b4 (HEAD -> master)
+Author: Serge <serge.*********@retzien.fr>
+Date:   Tue Jan 20 10:07:22 2026 +0100
+
+    Suppressoin de mailing liste
+
+commit e952c0fd43317cba8afead584b7933621eb307f7
+Author: David <david.*********@retzien.fr>
+Date:   Tue Jan 20 09:37:19 2026 +0100
+
+    Changement éditeur par défaut
+```
 - Hook APT/dpkg :
   - À quoi ça sert : enregistrer les changements liés aux mises à jour de paquets.
   - Contexte : audit rapide après un `apt upgrade` ou une installation critique.
@@ -138,6 +199,14 @@ Comment ça marche :
 - Utilisez-les pour ajouter des contrôles, des notifications, des exports ou
   des actions d'audit.
 - Des exemples sont fournis dans `hooks/*.sample` (à copier/adapter).
+
+Exemple (post-commit) pour loguer les commits dans syslog sur un serveur partagé :
+
+```bash
+#!/bin/bash
+# Fichier : ${SYSGIT_DIR:-/var/lib/sysgit}/hooks/post-commit
+logger -t sysgit "commit $(git rev-parse --short HEAD) par ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}> : $(git show -s --format=%s)"
+```
 
 ## Migration depuis etckeeper
 
