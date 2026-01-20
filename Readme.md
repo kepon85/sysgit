@@ -42,6 +42,7 @@ sudo bash /tmp/sysgit-install.sh
 
 The script checks for `make` and a downloader (git/curl/wget), fetches the repo, then runs `make install`.
 You can override paths or sources: `PREFIX=/opt SYSCONFDIR=/etc SYSGIT_BRANCH=main SYSGIT_REPO_URL=https://framagit.org/kepon/sysgit.git bash install.sh`.
+Skip installing the autocommit timer/service with `SYSGIT_INSTALL_AUTOCOMMIT_TIMER=0 bash install.sh` (or `make install INSTALL_AUTOCOMMIT_TIMER=0`), useful on systems without systemd or when you prefer to manage scheduling yourself.
 
 ```bash
 make install
@@ -57,7 +58,7 @@ This installs:
 - `sysgit` into `PREFIX/bin`
 - the default config into `/etc/sysgit.conf_default`
 - a live config if `/etc/sysgit.conf` does not already exist
-- APT hook and systemd timer/service units for optional integrations
+- APT hook and systemd timer/service units for optional integrations (systemctl daemon-reload is run automatically when available)
 
 ## Update
 
@@ -96,6 +97,7 @@ Optional features controlled by config flags, with usage context:
   - When to use: servers with frequent manual or scripted changes.
   - Set `AUTOCOMMIT=1`, then enable the timer:
     - `systemctl enable --now sysgit-autocommit.timer`
+    - Install skips the timer if `SYSGIT_INSTALL_AUTOCOMMIT_TIMER=0` or `INSTALL_AUTOCOMMIT_TIMER=0` was set.
   - Or run `sysgit -autocommit` manually.
 - Logout check:
   - What it does: reminds you to commit before leaving a session.

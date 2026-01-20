@@ -2,6 +2,7 @@ PREFIX ?= /usr/local
 SYSCONFDIR ?= /etc
 BINDIR ?= $(PREFIX)/bin
 INSTALL ?= install
+INSTALL_AUTOCOMMIT_TIMER ?= 1
 
 .PHONY: install uninstall
 
@@ -17,8 +18,10 @@ install:
 	fi
 	$(INSTALL) -m 0644 -D etc/bash_completion.d/sysgit $(DESTDIR)$(SYSCONFDIR)/bash_completion.d/sysgit
 	$(INSTALL) -m 0644 -D etc/apt/apt.conf.d/90sysgit $(DESTDIR)$(SYSCONFDIR)/apt/apt.conf.d/90sysgit
-	$(INSTALL) -m 0644 -D etc/systemd/system/sysgit-autocommit.service $(DESTDIR)$(SYSCONFDIR)/systemd/system/sysgit-autocommit.service
-	$(INSTALL) -m 0644 -D etc/systemd/system/sysgit-autocommit.timer $(DESTDIR)$(SYSCONFDIR)/systemd/system/sysgit-autocommit.timer
+	@if [ "$(INSTALL_AUTOCOMMIT_TIMER)" != "0" ]; then \
+		$(INSTALL) -m 0644 -D etc/systemd/system/sysgit-autocommit.service $(DESTDIR)$(SYSCONFDIR)/systemd/system/sysgit-autocommit.service; \
+		$(INSTALL) -m 0644 -D etc/systemd/system/sysgit-autocommit.timer $(DESTDIR)$(SYSCONFDIR)/systemd/system/sysgit-autocommit.timer; \
+	fi
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/sysgit

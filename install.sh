@@ -6,6 +6,7 @@ BRANCH="${SYSGIT_BRANCH:-main}"
 PREFIX="${PREFIX:-/usr/local}"
 SYSCONFDIR="${SYSCONFDIR:-/etc}"
 DESTDIR="${DESTDIR:-}"
+INSTALL_AUTOCOMMIT_TIMER="${SYSGIT_INSTALL_AUTOCOMMIT_TIMER:-1}"
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
@@ -67,7 +68,7 @@ fetch_sources() {
 
 install_sysgit() {
   srcdir="$1"
-  make_args=(install PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}")
+  make_args=(install PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}" INSTALL_AUTOCOMMIT_TIMER="${INSTALL_AUTOCOMMIT_TIMER}")
   if [ -n "${DESTDIR}" ]; then
     make_args+=("DESTDIR=${DESTDIR}")
   fi
@@ -80,6 +81,14 @@ srcdir="$(fetch_sources)"
 trap 'rm -rf "${srcdir}"' EXIT
 install_sysgit "${srcdir}"
 echo "sysgit installed (PREFIX=${PREFIX}, SYSCONFDIR=${SYSCONFDIR})"
+if have_cmd systemctl && [ -z "${DESTDIR}" ]; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  if [ "${INSTALL_AUTOCOMMIT_TIMER}" != "0" ]; then
+    echo "Optional: enable the autocommit timer with: systemctl enable --now sysgit-autocommit.timer"
+  else
+    echo "Autocommit timer unit not installed (set SYSGIT_INSTALL_AUTOCOMMIT_TIMER=1 to include it)."
+  fi
+fi
 if [ -z "${DESTDIR}" ]; then
   echo "Try: sysgit -h"
   echo "And after init with : sysgit init"
