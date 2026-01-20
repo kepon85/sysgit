@@ -82,6 +82,7 @@ install_sysgit "${srcdir}"
 echo "sysgit installed (PREFIX=${PREFIX}, SYSCONFDIR=${SYSCONFDIR})"
 if [ -z "${DESTDIR}" ]; then
   echo "Try: sysgit -h"
+  echo "And after init with : sysgit init"
 else
   echo "Files staged under DESTDIR=${DESTDIR}"
 fi
