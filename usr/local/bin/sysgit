@@ -233,8 +233,7 @@ fi
 if [ "${ALWAYS_ROOT}" = "1" ] || [ "${ALWAYS_ROOT}" = "true" ]; then
   uid="$(id -u)"
   if [ "${uid}" -ne "0" ]; then
-    echo "This wrapper calls itself as user 'root' using sudo now:"
-    exec sudo -u root "$0" "$@"
+    exec sudo "$0" "$@"
   fi
 fi
 
@@ -243,6 +242,41 @@ ensure_logout_check() {
   if [ "${LOGOUT_CHECK}" != "1" ] && [ "${LOGOUT_CHECK}" != "true" ]; then
     return
   fi
+  read -r -d '' block_content <<'EOF'
+if [ -x "/usr/local/bin/sysgit" ]; then
+  if [ -n "$(sysgit status --porcelain 2>/dev/null)" ]; then
+    echo "###############################################"
+    echo "Il y a eu des modification sur le serveur :"
+    echo "###############################################"
+    echo
+    sysgit status
+    echo
+    if [ -t 0 ] && [ -t 1 ]; then
+      echo "[O] Quitter sans commit (defaut)"
+      echo "[a] Ajouter les fichiers suivis et commiter"
+      echo "[m/n] Annuler la deconnexion et retourner dans le shell"
+      read -r -p "Choix [O/a/m] : " reply
+      case "${reply:-O}" in
+        [aA])
+          if sysgit add -u && [ -n "$(sysgit status --porcelain 2>/dev/null)" ]; then
+            sysgit commit
+          fi
+          ;;
+        [mMnN])
+          echo "Deconnexion annulee. Retour au shell :"
+          echo "  * sysgit status : pour voir les modifications"
+          echo "  * sysgit add -u : pour ajouter les fichiers suivis"
+          echo "  * sysgit commit : pour commiter les modifications"
+          echo
+          exec "${SHELL:-/bin/bash}" -l
+          ;;
+        *)
+          ;;
+      esac
+    fi
+  fi
+fi
+EOF
   if [ -n "${SUDO_USER}" ]; then
     target_user="${SUDO_USER}"
     target_home="$(getent passwd "${SUDO_USER}" | cut -d: -f 6)"
@@ -257,38 +291,38 @@ ensure_logout_check() {
   marker_start="# >>> sysgit logout check >>>"
   marker_end="# <<< sysgit logout check <<<"
   if [ -f "${logout_file}" ] && grep -qF "${marker_start}" "${logout_file}" 2>/dev/null; then
+    tmp_file="$(mktemp)"
+    awk -v start="${marker_start}" -v end="${marker_end}" -v block="${block_content}" '
+      BEGIN { n = split(block, lines, "\n") }
+      $0 == start {
+        print start
+        for (i = 1; i <= n; i++) print lines[i]
+        skip = 1
+        next
+      }
+      $0 == end {
+        print end
+        skip = 0
+        next
+      }
+      skip == 1 { next }
+      { print }
+    ' "${logout_file}" > "${tmp_file}"
+    mv "${tmp_file}" "${logout_file}"
+  elif [ -f "${logout_file}" ] && grep -q "sysgit status" "${logout_file}" 2>/dev/null; then
     return
-  fi
-  if [ -f "${logout_file}" ] && grep -q "sysgit status" "${logout_file}" 2>/dev/null; then
-    return
-  fi
-  if [ -f "${logout_file}" ] && [ -s "${logout_file}" ]; then
-    printf '\n' >> "${logout_file}"
   else
-    printf '%s\n\n' '#!/bin/bash' >> "${logout_file}"
-  fi
-  {
-    echo "${marker_start}"
-    cat <<'EOF'
-if [ -x "/usr/local/bin/sysgit" ]; then
-  if [ -n "$(sysgit status --porcelain 2>/dev/null)" ]; then
-    echo "###############################################"
-    echo "Il y a eu des modification sur le serveur :"
-    echo "###############################################"
-    echo
-    sysgit status
-    echo
-    if [ -t 0 ] && [ -t 1 ]; then
-      read -r -p "Vous voudriez partir sans donner les raisons de ces changement ? [O/n] "
-      if [[ $REPLY =~ ^[Nn]$ ]]; then
-        sysgit commit
-      fi
+    if [ -f "${logout_file}" ] && [ -s "${logout_file}" ]; then
+      printf '\n' >> "${logout_file}"
+    else
+      printf '%s\n\n' '#!/bin/bash' >> "${logout_file}"
     fi
+    {
+      echo "${marker_start}"
+      printf '%s\n' "${block_content}"
+      echo "${marker_end}"
+    } >> "${logout_file}"
   fi
-fi
-EOF
-    echo "${marker_end}"
-  } >> "${logout_file}"
   if [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
     chown "${target_user}":"${target_user}" "${logout_file}" 2>/dev/null || true
   fi
