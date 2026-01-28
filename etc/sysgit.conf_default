@@ -21,6 +21,9 @@ LOGOUT_CHECK=1
 # If set to 1/true, sysgit -autocommit will create snapshots when changes exist.
 AUTOCOMMIT=1
 
+# If set to 1/true, sysgit -apt with hook /apt/apt.conf.d/90sysgit after 
+APT=1
+
 # Enable multiple git committer profiles (interactive selection on each run).
 MULTI_GIT_COMMITTER=0
 

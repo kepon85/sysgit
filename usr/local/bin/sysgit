@@ -4,9 +4,10 @@
 GIT=/usr/bin/git
 GIT_COMMIT_OPTIONS=""
 SYSGIT_DIR=/var/lib/sysgit
-ALWAYS_ROOT=0
+ALWAYS_ROOT=1
 LOGOUT_CHECK=0
-AUTOCOMMIT=0
+APT=1
+AUTOCOMMIT=1
 MULTI_GIT_COMMITTER=0
 MULTI_GIT_COMMITTER_PROFILE=/var/lib/sysgit/sysgit.profile
 MULTI_GIT_COMMITTER_PROFILE_HISTORY=/var/lib/sysgit/sysgit.profile.history
@@ -182,6 +183,9 @@ ensure_git_excludes_config
 
 # Handle APT post-invoke hook.
 if [ "${APT_MODE}" = "1" ]; then
+  if [ "${APT}" = "0" ] || [ "${APT}" = "false" ]; then
+    exit 0
+  fi
   ${GIT} --git-dir="${SYSGIT_DIR}" --work-tree=/ add -u \
     && "$0" commit -m "dpkg: $(date -Iseconds)" || true
   exit 0
