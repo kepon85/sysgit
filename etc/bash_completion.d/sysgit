@@ -8,7 +8,7 @@ _sysgit_config_value() {
     $0 ~ "^[[:space:]]*"key"[[:space:]]*=" {
       val=$2
       sub(/^[[:space:]]+/, "", val)
-      gsub(/[\"\047]/, "", val)
+      gsub(/["\047]/, "", val)
       sub(/[[:space:]]+$/, "", val)
       print val
     }' "${config}" | tail -n1
@@ -69,6 +69,45 @@ _sysgit_git_subcommand() {
   done
 }
 
+_sysgit_load_git_completion() {
+  if declare -F __git_main >/dev/null; then
+    return 0
+  fi
+
+  if declare -F _completion_loader >/dev/null; then
+    _completion_loader git >/dev/null 2>&1 || true
+  fi
+
+  declare -F __git_main >/dev/null
+}
+
+_sysgit_complete_fallback() {
+  local cur="${1}"
+  local subcmd="${2}"
+  local common_commands="add bisect blame branch checkout cherry-pick clean clone commit diff fetch grep init log merge mv pull push rebase remote reset restore revert rm show stash status switch tag"
+  local path_commands="add blame checkout clean diff grep log mv reset restore rm show status"
+
+  if [[ -z "${subcmd}" || "${subcmd}" == "${cur}" ]]; then
+    COMPREPLY+=( $(compgen -W "${common_commands} ignore" -- "${cur}") )
+    return
+  fi
+
+  if [[ "${cur}" == /* ]]; then
+    _filedir
+    return
+  fi
+
+  if [[ "${cur}" == -* ]]; then
+    return
+  fi
+
+  case " ${path_commands} " in
+    *" ${subcmd} "*)
+      _filedir
+      ;;
+  esac
+}
+
 _sysgit() {
   local cur prev words cword
 
@@ -89,21 +128,27 @@ _sysgit() {
       ;;
   esac
 
-  if [[ "${cur}" == -* ]]; then
+  local subcmd="$(_sysgit_git_subcommand)"
+
+  if [[ "${cur}" == -* && ( -z "${subcmd}" || "${subcmd}" == "${cur}" ) ]]; then
     COMPREPLY=( $(compgen -W "-apt -autocommit -c -p -u -h" -- "${cur}") )
     return
   fi
 
-  if declare -F __git_main >/dev/null; then
+  if _sysgit_load_git_completion; then
     local i skip_next=0
     local new_words=("git")
+    local new_cword=0
     local saved_words=("${COMP_WORDS[@]}")
     local saved_cword="${COMP_CWORD}"
+    local saved_completion_words=("${words[@]}")
+    local saved_completion_cword="${cword}"
+    local saved_completion_prev="${prev}"
+    local saved_completion_cur="${cur}"
     local config="$(_sysgit_get_config)"
     local sysgit_dir="/var/lib/sysgit"
     local work_tree="/"
     local cfg_dir=""
-    local subcmd="$(_sysgit_git_subcommand)"
 
     for ((i=1; i<${#COMP_WORDS[@]}; i++)); do
       if ((skip_next)); then
@@ -118,6 +163,9 @@ _sysgit() {
           ;;
         *)
           new_words+=("${COMP_WORDS[i]}")
+          if ((i <= COMP_CWORD)); then
+            new_cword=$(( ${#new_words[@]} - 1 ))
+          fi
           ;;
       esac
     done
@@ -129,19 +177,31 @@ _sysgit() {
       fi
     fi
 
-    if [[ "${subcmd}" == "add" && "${cur}" == /* ]]; then
-      _filedir
-      return
+    COMP_WORDS=("${new_words[@]}")
+    COMP_CWORD="${new_cword}"
+    words=("${new_words[@]}")
+    cword="${new_cword}"
+    cur="${words[cword]}"
+    if ((cword > 0)); then
+      prev="${words[cword-1]}"
+    else
+      prev=""
     fi
 
-    COMP_WORDS=("${new_words[@]}")
-    COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
     GIT_DIR="${sysgit_dir}" GIT_WORK_TREE="${work_tree}" __git_main
     COMPREPLY+=( $(compgen -W "ignore" -- "${cur}") )
 
     COMP_WORDS=("${saved_words[@]}")
     COMP_CWORD="${saved_cword}"
+    words=("${saved_completion_words[@]}")
+    cword="${saved_completion_cword}"
+    prev="${saved_completion_prev}"
+    cur="${saved_completion_cur}"
+  fi
+
+  if ((${#COMPREPLY[@]} == 0)); then
+    _sysgit_complete_fallback "${cur}" "${subcmd}"
   fi
 }
 
-complete -F _sysgit sysgit
+complete -o bashdefault -o default -F _sysgit sysgit
